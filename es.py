@@ -1,6 +1,7 @@
 import torch
 import random
 import math
+import time
 
 from typing import Callable
 
@@ -14,7 +15,7 @@ def tournament_selection(
     for selected_individual_index in range(count_of_selected_individuals):
         two_random_indices = torch.randint(0, population.shape[0], (2,))
         random_pair_of_individuals = population[two_random_indices]
-        better_individual = min(
+        better_individual = max(
             random_pair_of_individuals,
             key=lambda x: fitness_function(x))
         selected_individuals[selected_individual_index] = better_individual
@@ -43,9 +44,11 @@ def eliminate_weak_individuals(
         ) -> torch.Tensor:
     concatenated = torch.cat((population, transformed_individuals), 0)
     values = torch.empty(concatenated.shape[0])
-    for i, row in enumerate(population):
+    for i, row in enumerate(concatenated):
         values[i] = fitness_function(row)
-    indices = torch.argsort(values)
+    indices = torch.argsort(values, descending=True)
+    # time.sleep(5)
+    # print(values[indices])
     sorted_concatenated = concatenated[indices]
     population = sorted_concatenated[:my]
     return population
@@ -62,7 +65,7 @@ def find_minimum_es(
 
     population = starting_population
 
-    curr_best_individual = min(population, key=lambda x: fitness_function(x))
+    curr_best_individual = max(population, key=lambda x: fitness_function(x))
     curr_best_score = fitness_function(curr_best_individual)
 
     for _ in range(number_of_generations):
@@ -76,11 +79,11 @@ def find_minimum_es(
             mean=0, std=standard_deviation, size=(lambd, 2))
         offspring += gaussian_noise
 
-        batch_best_individual = min(
+        batch_best_individual = max(
             offspring, key=lambda x: fitness_function(x))
         batch_best_score = fitness_function(batch_best_individual)
 
-        if batch_best_score < curr_best_score:
+        if batch_best_score > curr_best_score:
             curr_best_score = batch_best_score
             curr_best_individual = batch_best_individual
 
@@ -99,41 +102,21 @@ def main():
         return_value = numerator / denominator
         return return_value
 
-    starting_population = torch.Tensor([[0.01, 0.02],
-                                       [0.05, 0.03],
-                                       [0.06, 0.07],
-                                       [0.05, 0.04],
-                                       [0.08, 0.10],
-                                       [0.09, 0.13],
-                                       [0.20, 0.15],
-                                       [0.25, 0.23],
-                                       [0.40, -0.40],
-                                       [0.25, -0.30],
-                                       [0.45, -0.32],
-                                       [0.25, -0.42],
-                                       [0.13, -0.21],
-                                       [0.97, -0.89],
-                                       [-0.20, 0.30],
-                                       [-0.45, 0.32],
-                                       [-0.32, 0.87],
-                                       [-0.53, 0.54],
-                                       [-0.21, 0.42],
-                                       [-0.78, 0.21],
-                                       [-0.99, 0.43],
-                                       [-0.34, -0.21],
-                                       [-0.21, -0.56],
-                                       [-0.54, -0.32],
-                                       [-0.67, -0.45],
-                                       [-0.87, -0.63],
-                                       [-0.24, -0.24],
-                                       [-0.35, -0.23]])
+    starting_population = torch.rand((1000, 2))
+    for index, individual in enumerate(starting_population):
+        starting_population[index] = individual * (10 - (-10)) + (-10)
+
+    starting_population
+
+    print(starting_population)
+
     print(find_minimum_es(
         fitness_function=fitness_function,
         starting_population=starting_population,
-        lambd=1,
-        my=1,
-        standard_deviation=0.9,
-        number_of_generations=100000
+        lambd=20,
+        my=140,
+        standard_deviation=0.55,
+        number_of_generations=1000
             ))
 
 
