@@ -27,7 +27,7 @@ def perform_interpolation_mating(
         ) -> torch.Tensor:
     children = torch.empty((mate_count, 2))
     for child_index in range(mate_count):
-        two_random_indices = torch.randperm(population.shape[0])[:2]
+        two_random_indices = torch.randint(0, population.shape[0], (2,))
         parents = population[two_random_indices]
         a = random.uniform(0, 1)
         child = a * parents[0] + (1 - a) * parents[1]
@@ -61,41 +61,32 @@ def find_minimum_es(
         ) -> torch.Tensor:
 
     population = starting_population
-    scores = torch.empty(starting_population.shape[0])
-    for i, row in enumerate(population):
-        scores[i] = fitness_function(row)
+
     curr_best_individual = min(population, key=lambda x: fitness_function(x))
-    curr_best_score = min(scores)
+    curr_best_score = fitness_function(curr_best_individual)
 
     for _ in range(number_of_generations):
         selected_individuals = tournament_selection(
             fitness_function, population, lambd)
 
-        selected_individuals = perform_interpolation_mating(
+        offspring = perform_interpolation_mating(
             selected_individuals, lambd)
 
         gaussian_noise = torch.normal(
             mean=0, std=standard_deviation, size=(lambd, 2))
-        selected_individuals += gaussian_noise
+        offspring += gaussian_noise
 
-        batch_scores = torch.empty(selected_individuals.shape[0])
-        for i, row in enumerate(selected_individuals):
-            batch_scores[i] = fitness_function(row)
-        batch_best_score = min(batch_scores)
+        batch_best_individual = min(
+            offspring, key=lambda x: fitness_function(x))
+        batch_best_score = fitness_function(batch_best_individual)
 
         if batch_best_score < curr_best_score:
             curr_best_score = batch_best_score
-            curr_best_individual = min(
-                selected_individuals,
-                key=lambda x: fitness_function(x)
-            )
+            curr_best_individual = batch_best_individual
 
         population = eliminate_weak_individuals(
-            fitness_function, population, selected_individuals, my)
+            fitness_function, population, offspring, my)
 
-        scores = torch.empty(population.shape[0])
-        for i, row in enumerate(population):
-            scores[i] = fitness_function(row)
     return curr_best_individual
 
 
@@ -139,10 +130,10 @@ def main():
     print(find_minimum_es(
         fitness_function=fitness_function,
         starting_population=starting_population,
-        lambd=20,
-        my=140,
+        lambd=1,
+        my=1,
         standard_deviation=0.9,
-        number_of_generations=50000
+        number_of_generations=100000
             ))
 
 
